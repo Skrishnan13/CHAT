@@ -79,8 +79,15 @@ const chatFlowDefinition = ai.defineFlow(
       return output;
     } catch (error) {
       console.error('Error in chatFlow:', error);
-      // Provide a user-friendly error message
-      return { assistantResponse: "Sorry, an unexpected error occurred while processing your request. Please try again later." };
+      let flowErrorMessage = "Sorry, an unexpected error occurred while processing your request. Please try again later.";
+      if (error instanceof Error && error.message) {
+        flowErrorMessage = `Error in AI processing: ${error.message}`;
+      } else if (typeof error === 'string') {
+        flowErrorMessage = `Error in AI processing: ${error}`;
+      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as {message:unknown}).message === 'string') {
+        flowErrorMessage = `Error in AI processing: ${(error as {message:string}).message}`;
+      }
+      return { assistantResponse: flowErrorMessage };
     }
   }
 );

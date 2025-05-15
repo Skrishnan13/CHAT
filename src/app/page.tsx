@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -83,16 +84,32 @@ const PromptFlowPage: NextPage = () => {
 
     } catch (error) {
       console.error("Error sending message or getting AI response:", error);
-      const errorMessage: ChatMessage = {
+      
+      let clientErrorMessage = "Sorry, an unexpected error occurred on the client. Please try again.";
+      let toastDescription = "Could not get response from AI. Please check your connection or try again later.";
+
+      if (error instanceof Error && error.message) {
+        clientErrorMessage = `Client-side error: ${error.message}`;
+        toastDescription = `Details: ${error.message}`;
+      } else if (typeof error === 'string') {
+        clientErrorMessage = `Client-side error: ${error}`;
+        toastDescription = `Details: ${error}`;
+      } else if (typeof error === 'object' && error !== null && 'message' in error && typeof (error as {message:unknown}).message === 'string') {
+          clientErrorMessage = `Client-side error: ${(error as {message:string}).message}`;
+          toastDescription = `Details: ${(error as {message:string}).message}`;
+      }
+
+      const errorMessageToDisplay: ChatMessage = {
         id: 'error-' + Date.now(),
-        role: 'system', // Or 'assistant' with an error style
-        content: 'Sorry, something went wrong. Please try again.',
+        role: 'system', 
+        content: clientErrorMessage,
         timestamp: Date.now(),
       };
-      setMessages(prevMessages => [...prevMessages, errorMessage]);
+      setMessages(prevMessages => [...prevMessages, errorMessageToDisplay]);
+      
       toast({
-        title: "Error",
-        description: "Could not get response from AI. Please check your connection or try again later.",
+        title: "Error Sending Message",
+        description: toastDescription,
         variant: "destructive",
       });
     } finally {
