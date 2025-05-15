@@ -5,16 +5,24 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "@/lib/utils"
 
+// Define custom props type to include viewportRef
+interface CustomScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
+  viewportRef?: React.Ref<HTMLDivElement>;
+}
+
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+  CustomScrollAreaProps // Use the custom props type
+>(({ className, children, viewportRef, ...props }, ref) => ( // Destructure viewportRef
   <ScrollAreaPrimitive.Root
-    ref={ref}
+    ref={ref} // This ref is for the Root element itself
     className={cn("relative overflow-hidden", className)}
-    {...props}
+    {...props} // viewportRef is now correctly excluded from being spread to Root
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+    <ScrollAreaPrimitive.Viewport
+      ref={viewportRef} // Pass viewportRef to the Viewport component
+      className="h-full w-full rounded-[inherit]"
+    >
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />
