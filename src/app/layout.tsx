@@ -1,16 +1,15 @@
 import type {Metadata} from 'next';
-import { Geist_Sans, Geist_Mono } from 'next/font/google'; // Corrected import for Geist
+import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
-
-const geistSans = Geist_Sans({ // Corrected usage
-  variable: '--font-geist-sans',
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({ // Corrected usage
-  variable: '--font-geist-mono',
+const robotoMono = Roboto_Mono({
+  variable: '--font-roboto-mono',
   subsets: ['latin'],
 });
 
@@ -26,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${robotoMono.variable} font-sans antialiased`}>
         {children}
         <Toaster />
       </body>

@@ -11,13 +11,13 @@ const ChatMessageForAIFlowSchema = z.object({
   content: z.string().describe("The content of the message."),
 });
 
-export const ChatFlowInputSchema = z.object({
+const ChatFlowInputSchema = z.object({
   history: z.array(ChatMessageForAIFlowSchema).describe('The history of the conversation, excluding the latest user prompt.'),
   userPrompt: z.string().describe('The latest user prompt to respond to.'),
 });
 export type ChatFlowInput = z.infer<typeof ChatFlowInputSchema>;
 
-export const ChatFlowOutputSchema = z.object({
+const ChatFlowOutputSchema = z.object({
   assistantResponse: z.string().describe("The LLM's response to the user prompt."),
 });
 export type ChatFlowOutput = z.infer<typeof ChatFlowOutputSchema>;
