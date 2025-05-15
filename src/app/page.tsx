@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import ChatHistory from '@/components/chat/chat-history';
@@ -16,29 +16,29 @@ const PromptFlowPage: NextPage = () => {
   const { toast } = useToast();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  const initialMessages: ChatMessage[] = [
-    { 
-      id: 'greeting-' + Date.now(), // Ensure unique ID for initial greeting
-      role: 'assistant', 
-      content: 'Hello! I am PromptFlow. How can I assist you today?', 
-      timestamp: Date.now() 
+  // Memoize initialMessages to make it stable
+  const stableInitialMessages = useMemo<ChatMessage[]>(() => [
+    {
+      id: 'greeting-initial', // Stable ID
+      role: 'assistant',
+      content: 'Hello! I am PromptFlow. How can I assist you today?',
+      timestamp: Date.now() // Timestamp captured once on initial memoization
     }
-  ];
+  ], []); // Empty dependency array ensures this is created only once
 
-  const [messages, setMessages] = useLocalStorage<ChatMessage[]>('promptflow-chat-history', () => initialMessages);
+  const [messages, setMessages] = useLocalStorage<ChatMessage[]>(
+    'promptflow-chat-history',
+    stableInitialMessages // Pass the stable, memoized array
+  );
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Effect to handle initial messages if localStorage is empty.
   // This ensures the default greeting is only set once if no history exists.
   useEffect(() => {
     if (!initialLoadComplete) {
-      const storedHistory = window.localStorage.getItem('promptflow-chat-history');
-      if (!storedHistory || JSON.parse(storedHistory).length === 0) {
-        // Only set initial messages if local storage is truly empty or uninitialized
-        // useLocalStorage hook now handles this better by setting initial value to LS if not present.
-        // So, we can rely on useLocalStorage's initialValue logic.
-        // If messages from LS is empty, it will use initialMessages.
-      }
+      // The useLocalStorage hook now correctly handles setting the initial value
+      // to localStorage if it's not present, and initializing the state.
+      // So, this effect primarily serves to set initialLoadComplete.
       setInitialLoadComplete(true);
     }
   }, [initialLoadComplete]);
@@ -65,12 +65,12 @@ const PromptFlowPage: NextPage = () => {
           role: msg.role as 'user' | 'assistant', // Type assertion
           content: msg.content,
         }));
-      
+
       const aiInput: ChatFlowInput = {
         history: historyForAI,
         userPrompt: userPrompt,
       };
-      
+
       const aiResponse = await invokeChatFlow(aiInput);
 
       const newAssistantMessage: ChatMessage = {
