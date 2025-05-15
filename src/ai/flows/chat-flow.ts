@@ -1,10 +1,18 @@
 // src/ai/flows/chat-flow.ts
 'use server';
 
+/**
+ * @fileOverview Defines a Genkit flow for handling chat conversations.
+ *
+ * - invokeChatFlow - An async function to get a response from the chat AI.
+ * - ChatFlowInput - The input type for the invokeChatFlow function.
+ * - ChatFlowOutput - The return type for the invokeChatFlow function.
+ */
+
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-// This schema is for communication with the AI flow.
+// This schema is for communication with the AI flow (external contract).
 // The main app might use a slightly different ChatMessage type (e.g. with timestamp).
 const ChatMessageForAIFlowSchema = z.object({
   role: z.enum(['user', 'assistant']).describe("The role of the message sender, either 'user' or 'assistant'."),
@@ -22,34 +30,47 @@ const ChatFlowOutputSchema = z.object({
 });
 export type ChatFlowOutput = z.infer<typeof ChatFlowOutputSchema>;
 
+// Internal schema for the prompt itself
+const ChatPromptInternalInputSchema = z.object({
+  formattedHistory: z.string().describe('The pre-formatted history of the conversation as a single string.'),
+  userPrompt: z.string().describe('The latest user prompt to respond to.'),
+});
+
 const chatPrompt = ai.definePrompt({
   name: 'chatPrompt',
-  input: { schema: ChatFlowInputSchema },
+  input: { schema: ChatPromptInternalInputSchema }, // Use internal schema
   output: { schema: ChatFlowOutputSchema },
-  prompt: (input) => {
-    let promptString = "You are PromptFlow, a helpful and friendly AI assistant. Provide concise and informative responses.\n\nConversation History:\n";
-    input.history.forEach(msg => {
-      promptString += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
-    });
-    promptString += `User: ${input.userPrompt}\nAssistant:`; // The model will complete from here
-    return promptString;
-  },
+  prompt: `You are PromptFlow, a helpful and friendly AI assistant. Provide concise and informative responses.
+
+Conversation History:
+{{{formattedHistory}}}
+
+User: {{{userPrompt}}}
+Assistant:`, // Model will complete from here
 });
 
 const chatFlowDefinition = ai.defineFlow(
   {
     name: 'chatFlow',
-    inputSchema: ChatFlowInputSchema,
-    outputSchema: ChatFlowOutputSchema,
+    inputSchema: ChatFlowInputSchema,   // External input schema
+    outputSchema: ChatFlowOutputSchema, // External output schema
   },
   async (input) => {
     try {
       // Ensure history is not excessively long to avoid token limits.
       // This is a simple truncation, more sophisticated summarization might be needed for very long histories.
-      const maxHistoryLength = 10; // Keep last 10 exchanges (20 messages)
-      const truncatedHistory = input.history.slice(-maxHistoryLength * 2);
+      const maxHistoryLength = 10; // Keep last 10 exchanges (user + assistant = 1 exchange)
+      const truncatedHistory = input.history.slice(-maxHistoryLength * 2); // *2 for user and assistant messages
       
-      const { output } = await chatPrompt({ ...input, history: truncatedHistory });
+      // Format history for the prompt
+      const formattedHistory = truncatedHistory
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+
+      const { output } = await chatPrompt({ 
+        formattedHistory: formattedHistory, 
+        userPrompt: input.userPrompt 
+      });
 
       if (!output || typeof output.assistantResponse !== 'string') {
         console.warn('Chat flow output was missing or not in expected format:', output);
@@ -66,10 +87,5 @@ const chatFlowDefinition = ai.defineFlow(
 
 // This function will be called by the client (e.g., from a server action in page.tsx)
 export const invokeChatFlow = async (input: ChatFlowInput): Promise<ChatFlowOutput> => {
-    // "use server" directive is typically for functions directly called from client components as server actions.
-    // Since this flow itself is defined with 'use server' at the top (implicitly by being in an AI flow file potentially),
-    // and Genkit handles the server-side execution, we directly export the function.
-    // If this file was NOT implicitly a server module, then 'use server' would be needed here.
-    // For Genkit flows, they are server-side by nature.
     return chatFlowDefinition(input);
 };
